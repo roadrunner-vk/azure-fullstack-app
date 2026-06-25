@@ -28,6 +28,13 @@
       >Done</button>
     </div>
 
+    <div v-if="selected.size > 0" class="bulk-actions">
+      <span>{{ selected.size }} selected</span>
+      <button class="delete-selected-btn" @click="confirmDeleteSelected">
+        Delete Selected
+      </button>
+    </div>
+
     <p v-if="loading" class="status">Loading...</p>
     <p v-else-if="error" class="status error">{{ error }}</p>
 
@@ -35,9 +42,15 @@
       <li
         v-for="todo in filteredTodos"
         :key="todo.id"
-        :class="{ completed: todo.completed }"
+        :class="{ completed: todo.completed, selected: selected.has(todo.id) }"
       >
-        <label class="todo-item">
+        <input
+          type="checkbox"
+          class="select-cb"
+          :checked="selected.has(todo.id)"
+          @change="toggleSelect(todo.id)"
+        />
+        <label class="todo-item" @click.prevent="toggleTodo(todo)">
           <input
             type="checkbox"
             :checked="todo.completed"
@@ -51,9 +64,20 @@
             </span>
           </div>
         </label>
-        <button class="delete-btn" @click="deleteTodo(todo.id)">&times;</button>
+        <button class="delete-btn" @click="confirmDelete(todo.id)">Delete</button>
       </li>
     </ul>
+
+    <!-- Confirmation dialog -->
+    <div v-if="showConfirm" class="confirm-overlay" @click.self="showConfirm = false">
+      <div class="confirm-dialog">
+        <p>{{ confirmMessage }}</p>
+        <div class="confirm-actions">
+          <button class="confirm-cancel" @click="showConfirm = false">Cancel</button>
+          <button class="confirm-delete" @click="executeDelete">Delete</button>
+        </div>
+      </div>
+    </div>
 
     <p v-if="!loading && filteredTodos.length === 0" class="status">
       No todos to show.
@@ -68,6 +92,10 @@ const todos = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const filter = ref("all");
+const selected = ref(new Set());
+const showConfirm = ref(false);
+const confirmMessage = ref("");
+const pendingDeleteIds = ref([]);
 
 const newTodo = ref({ title: "", description: "", due_date: "" });
 
@@ -79,6 +107,41 @@ const filteredTodos = computed(() => {
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString();
+}
+
+function toggleSelect(id) {
+  const s = new Set(selected.value);
+  if (s.has(id)) s.delete(id);
+  else s.add(id);
+  selected.value = s;
+}
+
+function confirmDelete(id) {
+  pendingDeleteIds.value = [id];
+  confirmMessage.value = "Are you sure you want to delete this todo?";
+  showConfirm.value = true;
+}
+
+function confirmDeleteSelected() {
+  pendingDeleteIds.value = [...selected.value];
+  confirmMessage.value = `Are you sure you want to delete ${pendingDeleteIds.value.length} todo(s)?`;
+  showConfirm.value = true;
+}
+
+async function executeDelete() {
+  showConfirm.value = false;
+  const ids = pendingDeleteIds.value;
+  try {
+    for (const id of ids) {
+      const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete todo");
+    }
+    todos.value = todos.value.filter((t) => !ids.includes(t.id));
+    selected.value = new Set();
+  } catch (e) {
+    error.value = e.message;
+  }
+  pendingDeleteIds.value = [];
 }
 
 async function fetchTodos() {
@@ -130,13 +193,7 @@ async function toggleTodo(todo) {
 }
 
 async function deleteTodo(id) {
-  try {
-    const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete todo");
-    todos.value = todos.value.filter((t) => t.id !== id);
-  } catch (e) {
-    error.value = e.message;
-  }
+  confirmDelete(id);
 }
 
 onMounted(fetchTodos);

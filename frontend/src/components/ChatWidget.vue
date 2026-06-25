@@ -59,11 +59,14 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: messages.value }),
     });
-    if (!res.ok) throw new Error("Failed to get response");
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.detail || `HTTP ${res.status}`);
+    }
     const data = await res.json();
     messages.value.push({ role: "assistant", content: data.reply });
   } catch (e) {
-    messages.value.push({ role: "assistant", content: "Sorry, something went wrong." });
+    messages.value.push({ role: "assistant", content: `Error: ${e.message}` });
   } finally {
     loading.value = false;
     scrollToBottom();

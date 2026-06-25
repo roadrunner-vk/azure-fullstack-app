@@ -184,14 +184,15 @@ resource "azurerm_container_app" "frontend" {
 
       env {
         name  = "BACKEND_URL"
-        value = azurerm_container_app.backend.ingress[0].fqdn
+        value = "ca-backend"
       }
     }
   }
 
   lifecycle {
     ignore_changes = [
-      template[0].container[0].image
+      template[0].container[0].image,
+      template[0].container[0].env
     ]
   }
 }

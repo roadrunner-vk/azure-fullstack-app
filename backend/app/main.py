@@ -1,11 +1,9 @@
-import traceback
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import close_db, connect_db, get_database
+from app.database import close_db, connect_db
 from app.routes.todos import router as todo_router
 
 
@@ -30,16 +28,6 @@ app.add_middleware(
 @app.get("/api/health")
 async def health():
     return {"status": "healthy"}
-
-
-@app.get("/api/dbcheck")
-async def dbcheck():
-    try:
-        db = get_database()
-        result = await db.command("ping")
-        return {"status": "connected", "ping": result}
-    except Exception as e:
-        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
 
 app.include_router(todo_router, prefix="/api/todos", tags=["todos"])

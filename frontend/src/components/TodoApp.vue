@@ -49,13 +49,9 @@
           class="select-cb"
           :checked="selected.has(todo.id)"
           @change="toggleSelect(todo.id)"
+          title="Select for bulk delete"
         />
-        <label class="todo-item" @click.prevent="toggleTodo(todo)">
-          <input
-            type="checkbox"
-            :checked="todo.completed"
-            @change="toggleTodo(todo)"
-          />
+        <div class="todo-item" @click="toggleTodo(todo)">
           <div class="todo-content">
             <span class="title">{{ todo.title }}</span>
             <span v-if="todo.description" class="desc">{{ todo.description }}</span>
@@ -63,7 +59,8 @@
               Due: {{ formatDate(todo.due_date) }}
             </span>
           </div>
-        </label>
+          <span class="done-badge" v-if="todo.completed">✓ Done</span>
+        </div>
         <button class="delete-btn" @click="confirmDelete(todo.id)">Delete</button>
       </li>
     </ul>

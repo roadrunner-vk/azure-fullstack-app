@@ -11,6 +11,10 @@ on:
     paths:
       - "infra/**"
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   TF_WORKING_DIR: infra
 

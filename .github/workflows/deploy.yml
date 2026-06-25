@@ -8,6 +8,10 @@ on:
       - "frontend/**"
       - ".github/workflows/deploy.yml"
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   ACR_NAME: acrazurefullstackapp
   RESOURCE_GROUP: rg-azure-fullstack-app

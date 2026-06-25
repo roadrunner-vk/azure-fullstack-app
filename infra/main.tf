@@ -12,17 +12,6 @@ resource "azurerm_resource_group" "this" {
 }
 
 # ──────────────────────────────────────────────
-# Container Registry
-# ──────────────────────────────────────────────
-resource "azurerm_container_registry" "this" {
-  name                = "acr${local.safe_name}"
-  resource_group_name = azurerm_resource_group.this.name
-  location            = azurerm_resource_group.this.location
-  sku                 = "Basic"
-  admin_enabled       = true
-}
-
-# ──────────────────────────────────────────────
 # Log Analytics (required by Container Apps)
 # ──────────────────────────────────────────────
 resource "azurerm_log_analytics_workspace" "this" {
@@ -87,19 +76,13 @@ resource "azurerm_container_app" "backend" {
   revision_mode                = "Single"
 
   secret {
-    name  = "acr-password"
-    value = azurerm_container_registry.this.admin_password
-  }
-
-  secret {
     name  = "mongodb-url"
     value = azurerm_cosmosdb_account.this.primary_mongodb_connection_string
   }
 
-  registry {
-    server               = azurerm_container_registry.this.login_server
-    username             = azurerm_container_registry.this.admin_username
-    password_secret_name = "acr-password"
+  secret {
+    name  = "openai-key"
+    value = azurerm_cognitive_account.openai.primary_access_key
   }
 
   ingress {
@@ -132,6 +115,21 @@ resource "azurerm_container_app" "backend" {
         name  = "MONGODB_DB_NAME"
         value = "todoapp"
       }
+
+      env {
+        name        = "AZURE_OPENAI_KEY"
+        secret_name = "openai-key"
+      }
+
+      env {
+        name  = "AZURE_OPENAI_ENDPOINT"
+        value = azurerm_cognitive_account.openai.endpoint
+      }
+
+      env {
+        name  = "AZURE_OPENAI_DEPLOYMENT"
+        value = "gpt-4o-mini"
+      }
     }
   }
 
@@ -145,22 +143,43 @@ resource "azurerm_container_app" "backend" {
 # ──────────────────────────────────────────────
 # Container App — Frontend (public)
 # ──────────────────────────────────────────────
+
+# ──────────────────────────────────────────────
+# Azure OpenAI
+# ──────────────────────────────────────────────
+resource "azurerm_cognitive_account" "openai" {
+  name                  = "oai-${var.project_name}"
+  resource_group_name   = azurerm_resource_group.this.name
+  location              = "swedencentral"
+  kind                  = "OpenAI"
+  sku_name              = "S0"
+  custom_subdomain_name = "oai-${local.safe_name}"
+}
+
+resource "azurerm_cognitive_deployment" "gpt4o_mini" {
+  name                 = "gpt-4o-mini"
+  cognitive_account_id = azurerm_cognitive_account.openai.id
+
+  model {
+    format  = "OpenAI"
+    name    = "gpt-4o-mini"
+    version = "2024-07-18"
+  }
+
+  sku {
+    name     = "Standard"
+    capacity = 10
+  }
+}
+
+# ──────────────────────────────────────────────
+# Container App — Frontend (public)
+# ──────────────────────────────────────────────
 resource "azurerm_container_app" "frontend" {
   name                         = "ca-frontend"
   container_app_environment_id = azurerm_container_app_environment.this.id
   resource_group_name          = azurerm_resource_group.this.name
   revision_mode                = "Single"
-
-  secret {
-    name  = "acr-password"
-    value = azurerm_container_registry.this.admin_password
-  }
-
-  registry {
-    server               = azurerm_container_registry.this.login_server
-    username             = azurerm_container_registry.this.admin_username
-    password_secret_name = "acr-password"
-  }
 
   ingress {
     external_enabled = true

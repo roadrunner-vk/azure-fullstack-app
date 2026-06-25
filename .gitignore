@@ -13,6 +13,7 @@ dist/
 .terraform/
 *.tfstate
 *.tfstate.backup
+*.tfstate.*.backup
 *.tfvars
 !*.tfvars.example
 .terraform.lock.hcl

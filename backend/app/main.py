@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import close_db, connect_db
 from app.routes.todos import router as todo_router
+from app.routes.chat import router as chat_router
 
 
 @asynccontextmanager
@@ -34,3 +35,4 @@ async def health():
 
 
 app.include_router(todo_router, prefix="/api/todos", tags=["todos"])
+app.include_router(chat_router, prefix="/api/chat", tags=["chat"])

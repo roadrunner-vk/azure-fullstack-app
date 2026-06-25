@@ -10,6 +10,8 @@ async def connect_db() -> None:
     global _client, _db
     _client = AsyncIOMotorClient(MONGODB_URL)
     _db = _client[MONGODB_DB_NAME]
+    # Cosmos DB requires indexes for sort operations
+    await _db.todos.create_index("created_at")
 
 
 async def close_db() -> None:

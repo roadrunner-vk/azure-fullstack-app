@@ -11,9 +11,11 @@ on:
 permissions:
   id-token: write
   contents: read
+  packages: write
 
 env:
-  ACR_NAME: acrazurefullstackapp
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/roadrunner-vk/azure-fullstack-app
   RESOURCE_GROUP: rg-azure-fullstack-app
 
 jobs:
@@ -23,8 +25,17 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          docker build -t ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }} ./backend
+          docker push ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}
 
       - uses: azure/login@v2
         with:
@@ -32,18 +43,12 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push image
-        run: |
-          az acr login --name ${{ env.ACR_NAME }}
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }} ./backend
-          docker push ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
-
       - name: Deploy to Container Apps
         run: |
           az containerapp update \
             --name ca-backend \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
+            --image ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}
 
   deploy-frontend:
     name: Build & deploy frontend
@@ -52,8 +57,17 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          docker build -t ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }} ./frontend
+          docker push ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}
 
       - uses: azure/login@v2
         with:
@@ -61,15 +75,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push image
-        run: |
-          az acr login --name ${{ env.ACR_NAME }}
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }} ./frontend
-          docker push ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
-
       - name: Deploy to Container Apps
         run: |
           az containerapp update \
             --name ca-frontend \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+            --image ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}

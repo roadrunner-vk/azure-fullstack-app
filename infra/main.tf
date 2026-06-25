@@ -93,7 +93,7 @@ resource "azurerm_container_app" "backend" {
 
   secret {
     name  = "mongodb-url"
-    value = azurerm_cosmosdb_account.this.connection_strings[0]
+    value = azurerm_cosmosdb_account.this.primary_mongodb_connection_string
   }
 
   registry {

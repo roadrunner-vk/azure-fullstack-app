@@ -19,6 +19,6 @@ output "backend_internal_fqdn" {
 }
 
 output "cosmosdb_connection_string" {
-  value     = azurerm_cosmosdb_account.this.connection_strings[0]
+  value     = azurerm_cosmosdb_account.this.primary_mongodb_connection_string
   sensitive = true
 }
